@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard - AuraTheracare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+</head>
+<body class="dashboard-page">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <i class="fas fa-heartbeat"></i>
+            <span>AuraTheracare</span>
+        </div>
+        <div class="navbar-menu">
+            <span class="user-name" id="customerName"></span>
+            <button class="btn btn-secondary btn-sm" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="dashboard-container customer-dashboard">
+        <main class="main-content">
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <h1>Welcome, <span id="customerWelcomeName"></span>!</h1>
+                <p class="subtitle">Track your therapy sessions and monthly billing</p>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-calendar-check"></i>
+                    <div class="stat-content">
+                        <h3 id="totalSessionsThisMonth">0</h3>
+                        <p>Total Sessions This Month</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-rupee-sign"></i>
+                    <div class="stat-content">
+                        <h3 id="totalCostThisMonth">₹0</h3>
+                        <p>Total Cost This Month</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-heartbeat"></i>
+                    <div class="stat-content">
+                        <h3 id="lastVisitDate">N/A</h3>
+                        <p>Last Visit</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Invoice Section -->
+            <div class="export-section">
+                <div class="export-card">
+                    <div class="export-header">
+                        <i class="fas fa-file-invoice"></i>
+                        <h3>Monthly Invoice</h3>
+                    </div>
+                    <p class="export-description">
+                        Download your previous month's attendance and billing report
+                    </p>
+                    <div class="export-info">
+                        <p id="exportAvailabilityText"></p>
+                    </div>
+                    <button id="exportButton" class="btn btn-primary btn-large" onclick="exportMonthlyInvoice()">
+                        <i class="fas fa-download"></i>
+                        Export Monthly Invoice
+                    </button>
+                    <p class="export-note" id="exportNote"></p>
+                </div>
+            </div>
+
+            <!-- Current Month Attendance -->
+            <div class="attendance-section">
+                <div class="section-header">
+                    <h2>Current Month Attendance</h2>
+                    <div class="month-display">
+                        <i class="fas fa-calendar"></i>
+                        <span id="currentMonthDisplay"></span>
+                    </div>
+                </div>
+
+                <div class="attendance-calendar-view">
+                    <div id="attendanceCalendarGrid" class="calendar-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="attendance-list">
+                    <h3>Session Details</h3>
+                    <div id="attendanceListContent">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Therapy Pricing Info -->
+            <div class="pricing-info">
+                <h3>Therapy Pricing</h3>
+                <div class="pricing-cards">
+                    <div class="pricing-card">
+                        <i class="fas fa-lightbulb"></i>
+                        <h4>Biolite Therapy</h4>
+                        <p class="price">₹300 <span>per session</span></p>
+                    </div>
+                    <div class="pricing-card">
+                        <i class="fas fa-bolt"></i>
+                        <h4>Terahertz Therapy</h4>
+                        <p class="price">₹400 <span>per session</span></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Export Success Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h3>Invoice Generated</h3>
+                <button class="close-modal" onclick="closeExportModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p id="exportModalMessage"></p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="closeExportModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/customer-dashboard.js"></script>
+</body>
+</html>
