@@ -4,9 +4,9 @@
 
 ### 👨‍⚕️ Therapist/Admin Account
 ```
-📧 Email: coderjt25@gmail.com
-🔑 Password: jayadmin2024
-👤 Name: Jay Thakkar
+📧 Email: 
+🔑 Password: 
+👤 Name: 
 ```
 
 ### 👥 Test Customer Accounts
@@ -27,7 +27,7 @@ Simply open `index.html` in your web browser. That's it! No installation needed.
 
 ### Step 2: Login as Therapist
 ```
-1. Use: coderjt25@gmail.com / jayadmin2024
+1. Use: id/pass
 2. You'll see the Therapist Dashboard with 5 test clients
 ```
 
