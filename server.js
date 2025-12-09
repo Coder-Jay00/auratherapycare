@@ -16,68 +16,61 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
 
 // Database setup
-const db = new sqlite3.Database('./auracare.db', (err) => {
-  if (err) {
-    console.error('Error opening database:', err.message);
-  } else {
-    console.log('Connected to SQLite database.');
-    initializeDatabase();
-  }
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/auracare', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  console.log('Connected to MongoDB.');
+  initializeDatabase();
+}).catch(err => {
+  console.error('Error connecting to MongoDB:', err.message);
 });
 
-// Initialize database tables
-function initializeDatabase() {
-  db.serialize(() => {
-    // Users table
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      phone TEXT,
-      role TEXT NOT NULL DEFAULT 'customer',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+// Define MongoDB schemas
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phone: String,
+  role: { type: String, required: true, default: 'customer' },
+  created_at: { type: Date, default: Date.now }
+});
 
-    // Attendance table
-    db.run(`CREATE TABLE IF NOT EXISTS attendance (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_id INTEGER NOT NULL,
-      date TEXT NOT NULL,
-      therapy_type TEXT NOT NULL,
-      price REAL NOT NULL,
-      recorded_by INTEGER NOT NULL,
-      recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (customer_id) REFERENCES users (id),
-      FOREIGN KEY (recorded_by) REFERENCES users (id)
-    )`);
+const attendanceSchema = new mongoose.Schema({
+  customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  date: { type: String, required: true },
+  therapy_type: { type: String, required: true },
+  price: { type: Number, required: true },
+  recorded_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  recorded_at: { type: Date, default: Date.now }
+});
 
-    // Insert admin user if not exists
+const User = mongoose.model('User', userSchema);
+const Attendance = mongoose.model('Attendance', attendanceSchema);
+
+// Initialize database
+async function initializeDatabase() {
+  try {
+    // Check if admin user exists
     const adminEmail = 'coderjt25@gmail.com';
     const adminPassword = 'jayadmin2024';
     const adminName = 'Jay Thakkar';
 
-    db.get('SELECT id FROM users WHERE email = ?', [adminEmail], (err, row) => {
-      if (err) {
-        console.error('Error checking admin user:', err.message);
-      } else if (!row) {
-        bcrypt.hash(adminPassword, 10, (err, hashedPassword) => {
-          if (err) {
-            console.error('Error hashing admin password:', err.message);
-          } else {
-            db.run('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-              [adminName, adminEmail, hashedPassword, 'therapist'], (err) => {
-              if (err) {
-                console.error('Error inserting admin user:', err.message);
-              } else {
-                console.log('Admin user created successfully.');
-              }
-            });
-          }
-        });
-      }
-    });
-  });
+    const existingAdmin = await User.findOne({ email: adminEmail });
+    if (!existingAdmin) {
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      const adminUser = new User({
+        name: adminName,
+        email: adminEmail,
+        password: hashedPassword,
+        role: 'therapist'
+      });
+      await adminUser.save();
+      console.log('Admin user created successfully.');
+    }
+  } catch (err) {
+    console.error('Error initializing database:', err.message);
+  }
 }
 
 // Authentication middleware
@@ -101,48 +94,42 @@ function authenticateToken(req, res, next) {
 // Routes
 
 // Login
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  db.get('SELECT * FROM users WHERE email = ?', [email], (err, user) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-
+  try {
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    bcrypt.compare(password, user.password, (err, isValid) => {
-      if (err) {
-        return res.status(500).json({ error: 'Password comparison error' });
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       }
-
-      if (!isValid) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, name: user.name },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.json({
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
-      });
     });
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Register
