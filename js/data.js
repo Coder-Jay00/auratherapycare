@@ -1,5 +1,5 @@
 // AuraTheracare - Data Management
-// This file handles all data storage and retrieval using localStorage
+// This file handles all data storage and retrieval using API calls to the server
 
 // Pricing Configuration
 const THERAPY_PRICES = {
@@ -7,30 +7,39 @@ const THERAPY_PRICES = {
     'Terahertz': 400
 };
 
-// Initialize Data Structure
-function initializeData() {
-    // Initialize users if not exists
-    if (!localStorage.getItem('users')) {
-        const users = [
-            // Hardcoded Admin Account
-            {
-                id: 'admin-001',
-                name: 'Jay Thakkar',
-                email: 'coderjt25@gmail.com',
-                password: 'jayadmin2024',
-                role: 'therapist',
-                phone: '+91 98765 43210',
-                createdAt: new Date().toISOString()
-            }
-        ];
-        localStorage.setItem('users', JSON.stringify(users));
+// API Base URL
+const API_BASE = '';
+
+// Helper function to get auth token
+function getAuthToken() {
+    return localStorage.getItem('authToken');
+}
+
+// Helper function to make authenticated API calls
+async function apiCall(endpoint, options = {}) {
+    const token = getAuthToken();
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+    };
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...defaultOptions,
+        ...options,
+        headers: {
+            ...defaultOptions.headers,
+            ...options.headers
+        }
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Network error' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
     }
 
-    // Initialize attendance records if not exists
-    if (!localStorage.getItem('attendanceRecords')) {
-        const attendanceRecords = [];
-        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
-    }
+    return response.json();
 }
 
 
@@ -100,88 +109,100 @@ function getUserById(userId) {
 }
 
 // Attendance Record Functions
-function addAttendanceRecord(record) {
-    const records = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-    
-    const newRecord = {
-        id: generateRecordId(),
-        customerId: record.customerId,
-        date: record.date,
-        therapyType: record.therapyType,
-        price: THERAPY_PRICES[record.therapyType],
-        recordedBy: record.recordedBy,
-        recordedAt: new Date().toISOString()
-    };
-    
-    records.push(newRecord);
-    localStorage.setItem('attendanceRecords', JSON.stringify(records));
-    
-    return { success: true, record: newRecord };
+async function addAttendanceRecord(record) {
+    try {
+        const data = await apiCall('/api/attendance', {
+            method: 'POST',
+            body: JSON.stringify({
+                customerId: record.customerId,
+                date: record.date,
+                therapyType: record.therapyType,
+                price: THERAPY_PRICES[record.therapyType]
+            })
+        });
+
+        return { success: true, record: data };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
 }
 
-function addMultipleAttendanceRecords(customerId, date, therapyTypes, recordedBy) {
-    const records = [];
-    
-    therapyTypes.forEach(therapyType => {
-        const result = addAttendanceRecord({
+async function addMultipleAttendanceRecords(customerId, date, therapyTypes, recordedBy) {
+    const results = [];
+
+    for (const therapyType of therapyTypes) {
+        const result = await addAttendanceRecord({
             customerId,
             date,
             therapyType,
             recordedBy
         });
-        
+
         if (result.success) {
-            records.push(result.record);
+            results.push(result.record);
         }
-    });
-    
-    return { success: true, records };
+    }
+
+    return { success: results.length > 0, records: results };
 }
 
-function getAttendanceRecords(filters = {}) {
-    let records = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-    
-    // Apply filters
-    if (filters.customerId) {
-        records = records.filter(r => r.customerId === filters.customerId);
+async function getAttendanceRecords(filters = {}) {
+    try {
+        let endpoint = '/api/attendance/';
+
+        if (filters.customerId) {
+            endpoint += filters.customerId;
+        } else {
+            // If no customerId, we need all attendance records (therapist only)
+            // This would require a new endpoint, for now return empty array
+            console.warn('Getting all attendance records not implemented');
+            return [];
+        }
+
+        const records = await apiCall(endpoint);
+
+        // Apply additional filters
+        let filteredRecords = records;
+
+        if (filters.date) {
+            filteredRecords = filteredRecords.filter(r => r.date === filters.date);
+        }
+
+        if (filters.month !== undefined && filters.year !== undefined) {
+            filteredRecords = filteredRecords.filter(r => {
+                const recordDate = new Date(r.date);
+                return recordDate.getMonth() === filters.month &&
+                       recordDate.getFullYear() === filters.year;
+            });
+        }
+
+        if (filters.startDate && filters.endDate) {
+            filteredRecords = filteredRecords.filter(r => {
+                const recordDate = new Date(r.date);
+                return recordDate >= new Date(filters.startDate) &&
+                       recordDate <= new Date(filters.endDate);
+            });
+        }
+
+        // Sort by date (most recent first)
+        filteredRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return filteredRecords;
+    } catch (error) {
+        console.error('Error fetching attendance records:', error);
+        return [];
     }
-    
-    if (filters.date) {
-        records = records.filter(r => r.date === filters.date);
-    }
-    
-    if (filters.month && filters.year) {
-        records = records.filter(r => {
-            const recordDate = new Date(r.date);
-            return recordDate.getMonth() === filters.month && 
-                   recordDate.getFullYear() === filters.year;
-        });
-    }
-    
-    if (filters.startDate && filters.endDate) {
-        records = records.filter(r => {
-            const recordDate = new Date(r.date);
-            return recordDate >= new Date(filters.startDate) && 
-                   recordDate <= new Date(filters.endDate);
-        });
-    }
-    
-    // Sort by date (most recent first)
-    records.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    return records;
 }
 
-function deleteAttendanceRecord(recordId) {
-    let records = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-    records = records.filter(r => r.id !== recordId);
-    localStorage.setItem('attendanceRecords', JSON.stringify(records));
-    return { success: true };
+async function deleteAttendanceRecord(recordId) {
+    // Note: This would require a DELETE endpoint, which isn't implemented yet
+    console.warn('Delete attendance record not implemented');
+    return { success: false, message: 'Delete not implemented' };
 }
 
-function getAttendanceByDate(customerId, date) {
-    const records = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-    return records.filter(r => r.customerId === customerId && r.date === date);
+async function getAttendanceByDate(customerId, date) {
+    const records = await getAttendanceRecords({ customerId });
+    return records.filter(r => r.date === date);
 }
 
 // Statistics Functions
@@ -240,36 +261,36 @@ function getTherapistStats() {
     };
 }
 
-function getRevenueBreakdown(month, year) {
-    const customers = getAllCustomers();
+async function getRevenueBreakdown(month, year) {
+    const customers = await getAllCustomers();
     const breakdown = [];
-    
+
     let totalBiolite = 0;
     let totalTerahertz = 0;
     let bioliteCount = 0;
     let terahertzCount = 0;
-    
-    customers.forEach(customer => {
-        const records = getAttendanceRecords({
-            customerId: customer.id,
+
+    for (const customer of customers) {
+        const records = await getAttendanceRecords({
+            customerId: customer._id || customer.id,
             month,
             year
         });
-        
-        const bioliteRecords = records.filter(r => r.therapyType === 'Biolite');
-        const terahertzRecords = records.filter(r => r.therapyType === 'Terahertz');
-        
+
+        const bioliteRecords = records.filter(r => r.therapy_type === 'Biolite');
+        const terahertzRecords = records.filter(r => r.therapy_type === 'Terahertz');
+
         const bioliteTotal = bioliteRecords.length * THERAPY_PRICES.Biolite;
         const terahertzTotal = terahertzRecords.length * THERAPY_PRICES.Terahertz;
-        
+
         totalBiolite += bioliteTotal;
         totalTerahertz += terahertzTotal;
         bioliteCount += bioliteRecords.length;
         terahertzCount += terahertzRecords.length;
-        
+
         if (records.length > 0) {
             breakdown.push({
-                customerId: customer.id,
+                customerId: customer._id || customer.id,
                 customerName: customer.name,
                 bioliteCount: bioliteRecords.length,
                 terahertzCount: terahertzRecords.length,
@@ -277,8 +298,8 @@ function getRevenueBreakdown(month, year) {
                 totalAmount: bioliteTotal + terahertzTotal
             });
         }
-    });
-    
+    }
+
     return {
         biolite: { count: bioliteCount, amount: totalBiolite },
         terahertz: { count: terahertzCount, amount: totalTerahertz },
@@ -359,5 +380,4 @@ function getPreviousMonth() {
     };
 }
 
-// Initialize data on load
-initializeData();
+// Data management functions are now API-based

@@ -3,7 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const sqlite3 = require('sqlite3').verbose();
+const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
@@ -16,11 +16,8 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
 
 // Database setup
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/auracare', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('Connected to MongoDB.');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://coderjt25_db_user:FEFg67BbbS0Y9kZ5@auratherapycare.yynkfxs.mongodb.net/').then(() => {
+  console.log('Connected to MongoDB Atlas.');
   initializeDatabase();
 }).catch(err => {
   console.error('Error connecting to MongoDB:', err.message);
@@ -182,17 +179,17 @@ app.post('/api/register', async (req, res) => {
 });
 
 // Get all users (therapist only)
-app.get('/api/users', authenticateToken, (req, res) => {
+app.get('/api/users', authenticateToken, async (req, res) => {
   if (req.user.role !== 'therapist') {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  db.all('SELECT id, name, email, phone, role, created_at FROM users ORDER BY name', [], (err, users) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
+  try {
+    const users = await User.find({}, 'name email phone role created_at').sort({ name: 1 });
     res.json(users);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Get user profile
@@ -209,7 +206,7 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
 });
 
 // Add attendance (therapist only)
-app.post('/api/attendance', authenticateToken, (req, res) => {
+app.post('/api/attendance', authenticateToken, async (req, res) => {
   if (req.user.role !== 'therapist') {
     return res.status(403).json({ error: 'Access denied' });
   }
@@ -220,17 +217,27 @@ app.post('/api/attendance', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
-  db.run('INSERT INTO attendance (customer_id, date, therapy_type, price, recorded_by) VALUES (?, ?, ?, ?, ?)',
-    [customerId, date, therapyType, price, req.user.id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to add attendance' });
-    }
-    res.status(201).json({ id: this.lastID, message: 'Attendance added successfully' });
-  });
+  try {
+    const attendance = new Attendance({
+      customer_id: customerId,
+      date,
+      therapy_type: therapyType,
+      price,
+      recorded_by: req.user.id
+    });
+
+    const savedAttendance = await attendance.save();
+    res.status(201).json({
+      id: savedAttendance._id,
+      message: 'Attendance added successfully'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add attendance' });
+  }
 });
 
 // Get attendance for a customer
-app.get('/api/attendance/:customerId', authenticateToken, (req, res) => {
+app.get('/api/attendance/:customerId', authenticateToken, async (req, res) => {
   const { customerId } = req.params;
 
   // Allow therapists to view any customer's attendance, customers only their own
@@ -238,16 +245,18 @@ app.get('/api/attendance/:customerId', authenticateToken, (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  db.all('SELECT * FROM attendance WHERE customer_id = ? ORDER BY date DESC', [customerId], (err, records) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
+  try {
+    const records = await Attendance.find({ customer_id: customerId })
+      .populate('recorded_by', 'name')
+      .sort({ date: -1 });
     res.json(records);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Get attendance for current month
-app.get('/api/attendance/month/:customerId/:month/:year', authenticateToken, (req, res) => {
+app.get('/api/attendance/month/:customerId/:month/:year', authenticateToken, async (req, res) => {
   const { customerId, month, year } = req.params;
 
   if (req.user.role !== 'therapist' && req.user.id != customerId) {
@@ -257,17 +266,20 @@ app.get('/api/attendance/month/:customerId/:month/:year', authenticateToken, (re
   const startDate = `${year}-${month.padStart(2, '0')}-01`;
   const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-  db.all('SELECT * FROM attendance WHERE customer_id = ? AND date BETWEEN ? AND ? ORDER BY date',
-    [customerId, startDate, endDate], (err, records) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
+  try {
+    const records = await Attendance.find({
+      customer_id: customerId,
+      date: { $gte: startDate, $lte: endDate }
+    }).sort({ date: 1 });
+
     res.json(records);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Get revenue data (therapist only)
-app.get('/api/revenue/:month/:year', authenticateToken, (req, res) => {
+app.get('/api/revenue/:month/:year', authenticateToken, async (req, res) => {
   if (req.user.role !== 'therapist') {
     return res.status(403).json({ error: 'Access denied' });
   }
@@ -276,30 +288,42 @@ app.get('/api/revenue/:month/:year', authenticateToken, (req, res) => {
   const startDate = `${year}-${month.padStart(2, '0')}-01`;
   const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-  db.all(`
-    SELECT u.name, u.id as customer_id,
-           SUM(CASE WHEN a.therapy_type = 'Biolite' THEN 1 ELSE 0 END) as biolite_count,
-           SUM(CASE WHEN a.therapy_type = 'Terahertz' THEN 1 ELSE 0 END) as terahertz_count,
-           SUM(a.price) as total_amount
-    FROM users u
-    LEFT JOIN attendance a ON u.id = a.customer_id AND a.date BETWEEN ? AND ?
-    WHERE u.role = 'customer'
-    GROUP BY u.id, u.name
-    ORDER BY u.name
-  `, [startDate, endDate], (err, revenue) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
+  try {
+    const customers = await User.find({ role: 'customer' }).sort({ name: 1 });
+
+    const revenue = [];
+    let totals = { biolite_count: 0, terahertz_count: 0, total_amount: 0 };
+
+    for (const customer of customers) {
+      const records = await Attendance.find({
+        customer_id: customer._id,
+        date: { $gte: startDate, $lte: endDate }
+      });
+
+      const bioliteCount = records.filter(r => r.therapy_type === 'Biolite').length;
+      const terahertzCount = records.filter(r => r.therapy_type === 'Terahertz').length;
+      const totalAmount = records.reduce((sum, r) => sum + r.price, 0);
+
+      if (records.length > 0) {
+        revenue.push({
+          customerName: customer.name,
+          customer_id: customer._id,
+          biolite_count: bioliteCount,
+          terahertz_count: terahertzCount,
+          total_sessions: records.length,
+          total_amount: totalAmount
+        });
+      }
+
+      totals.biolite_count += bioliteCount;
+      totals.terahertz_count += terahertzCount;
+      totals.total_amount += totalAmount;
     }
 
-    // Calculate totals
-    const totals = revenue.reduce((acc, item) => ({
-      biolite_count: acc.biolite_count + (item.biolite_count || 0),
-      terahertz_count: acc.terahertz_count + (item.terahertz_count || 0),
-      total_amount: acc.total_amount + (item.total_amount || 0)
-    }), { biolite_count: 0, terahertz_count: 0, total_amount: 0 });
-
     res.json({ revenue, totals });
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Start server
@@ -308,13 +332,8 @@ app.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  db.close((err) => {
-    if (err) {
-      console.error('Error closing database:', err.message);
-    } else {
-      console.log('Database connection closed.');
-    }
-    process.exit(0);
-  });
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  console.log('Database connection closed.');
+  process.exit(0);
 });

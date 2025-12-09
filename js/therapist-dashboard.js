@@ -91,49 +91,49 @@ function switchView(view) {
     }
 }
 
-function updateStats() {
-    const stats = getTherapistStats();
-    
+async function updateStats() {
+    const stats = await getTherapistStats();
+
     document.getElementById('totalClients').textContent = stats.totalClients;
     document.getElementById('totalSessionsMonth').textContent = stats.totalSessions;
     document.getElementById('monthlyRevenue').textContent = formatCurrency(stats.totalRevenue);
 }
 
 // ===== CLIENTS VIEW =====
-function loadClientsView() {
-    const customers = getAllCustomers();
+async function loadClientsView() {
+    const customers = await getAllCustomers();
     const tbody = document.getElementById('clientsTableBody');
-    
+
     tbody.innerHTML = '';
-    
+
     if (customers.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="fas fa-users"></i><br>No clients found</td></tr>';
         return;
     }
-    
-    customers.forEach(customer => {
-        const stats = getCustomerStats(customer.id);
-        
+
+    for (const customer of customers) {
+        const stats = await getCustomerStats(customer._id || customer.id);
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${customer.name}</strong></td>
             <td>${customer.email}</td>
-            <td>${customer.phone}</td>
+            <td>${customer.phone || 'N/A'}</td>
             <td>${stats.lastVisit ? formatDate(stats.lastVisit) : 'N/A'}</td>
             <td>${stats.totalSessions}</td>
             <td><strong>${formatCurrency(stats.totalCost)}</strong></td>
             <td>
-                <button class="action-btn view" onclick="viewClientAttendance('${customer.id}')">
+                <button class="action-btn view" onclick="viewClientAttendance('${customer._id || customer.id}')">
                     <i class="fas fa-eye"></i> View
                 </button>
-                <button class="action-btn add" onclick="openAttendanceModal('${customer.id}', '${new Date().toISOString().split('T')[0]}')">
+                <button class="action-btn add" onclick="openAttendanceModal('${customer._id || customer.id}', '${new Date().toISOString().split('T')[0]}')">
                     <i class="fas fa-plus"></i> Add Attendance
                 </button>
             </td>
         `;
-        
+
         tbody.appendChild(row);
-    });
+    }
 }
 
 function filterClients() {
@@ -213,29 +213,29 @@ function closeViewAttendanceModal() {
     document.getElementById('viewAttendanceModal').classList.remove('show');
 }
 
-function deleteRecord(recordId) {
+async function deleteRecord(recordId) {
     if (confirm('Are you sure you want to delete this attendance record?')) {
-        deleteAttendanceRecord(recordId);
-        updateStats();
-        loadClientsView();
+        await deleteAttendanceRecord(recordId);
+        await updateStats();
+        await loadClientsView();
         closeViewAttendanceModal();
     }
 }
 
 // ===== CALENDAR VIEW =====
-function loadCalendarView() {
+async function loadCalendarView() {
     // Populate customer selector
-    const customers = getAllCustomers();
+    const customers = await getAllCustomers();
     const select = document.getElementById('calendarClientSelect');
-    
+
     select.innerHTML = '<option value="">-- Select a client --</option>';
     customers.forEach(customer => {
         const option = document.createElement('option');
-        option.value = customer.id;
+        option.value = customer._id || customer.id;
         option.textContent = customer.name;
         select.appendChild(option);
     });
-    
+
     // Initialize calendar if not already done
     if (!calendar) {
         initializeCalendar();
@@ -276,11 +276,11 @@ function initializeCalendar() {
     calendar.render();
 }
 
-function loadCalendarEvents() {
+async function loadCalendarEvents() {
     if (!calendar || !selectedCustomer) return;
-    
-    const records = getAttendanceRecords({ customerId: selectedCustomer });
-    
+
+    const records = await getAttendanceRecords({ customerId: selectedCustomer });
+
     // Group records by date to show badge count
     const recordsByDate = {};
     records.forEach(record => {
@@ -289,17 +289,17 @@ function loadCalendarEvents() {
         }
         recordsByDate[record.date].push(record);
     });
-    
+
     // Create events for calendar
     const events = [];
     Object.keys(recordsByDate).forEach(date => {
         const dayRecords = recordsByDate[date];
-        const hasBiolite = dayRecords.some(r => r.therapyType === 'Biolite');
-        const hasTerahertz = dayRecords.some(r => r.therapyType === 'Terahertz');
-        
+        const hasBiolite = dayRecords.some(r => r.therapy_type === 'Biolite');
+        const hasTerahertz = dayRecords.some(r => r.therapy_type === 'Terahertz');
+
         let title = '';
         let className = '';
-        
+
         if (hasBiolite && hasTerahertz) {
             title = `Both (${dayRecords.length})`;
             className = 'both-event';
@@ -310,7 +310,7 @@ function loadCalendarEvents() {
             title = `Terahertz (${dayRecords.length})`;
             className = 'terahertz-event';
         }
-        
+
         events.push({
             title: title,
             start: date,
@@ -318,7 +318,7 @@ function loadCalendarEvents() {
             allDay: true
         });
     });
-    
+
     calendar.removeAllEvents();
     calendar.addEventSource(events);
 }
@@ -362,72 +362,72 @@ function closeAttendanceModal() {
     document.getElementById('attendanceError').classList.remove('show');
 }
 
-function handleAttendanceSave(e) {
+async function handleAttendanceSave(e) {
     e.preventDefault();
-    
+
     const customerId = document.getElementById('attendanceCustomerId').value;
     const date = document.getElementById('attendanceDate').value;
     const bioliteChecked = document.getElementById('therapyBiolite').checked;
     const terahertzChecked = document.getElementById('therapyTerahertz').checked;
     const errorDiv = document.getElementById('attendanceError');
-    
+
     // Validate at least one therapy is selected
     if (!bioliteChecked && !terahertzChecked) {
         errorDiv.textContent = 'Please select at least one therapy type';
         errorDiv.classList.add('show');
         return;
     }
-    
+
     // Prepare therapy types array
     const therapyTypes = [];
     if (bioliteChecked) therapyTypes.push('Biolite');
     if (terahertzChecked) therapyTypes.push('Terahertz');
-    
+
     // Add attendance records
-    const result = addMultipleAttendanceRecords(
+    const result = await addMultipleAttendanceRecords(
         customerId,
         date,
         therapyTypes,
         currentUser.id
     );
-    
+
     if (result.success) {
         closeAttendanceModal();
-        updateStats();
-        loadCalendarEvents();
-        loadClientsView();
-        
+        await updateStats();
+        await loadCalendarEvents();
+        await loadClientsView();
+
         alert(`Successfully recorded ${therapyTypes.length} session(s) for ${formatDate(date)}`);
     }
 }
 
 // ===== REVENUE VIEW =====
-function loadRevenueData() {
+async function loadRevenueData() {
     const monthInput = document.getElementById('revenueMonth').value;
     const [year, month] = monthInput.split('-');
     const monthIndex = parseInt(month) - 1;
-    
-    const revenue = getRevenueBreakdown(monthIndex, parseInt(year));
-    
+
+    const revenue = await getRevenueBreakdown(monthIndex, parseInt(year));
+
     // Update summary cards
     document.getElementById('bioliteCount').textContent = `${revenue.biolite.count} sessions`;
     document.getElementById('bioliteAmount').textContent = formatCurrency(revenue.biolite.amount);
-    
+
     document.getElementById('terahertzCount').textContent = `${revenue.terahertz.count} sessions`;
     document.getElementById('terahertzAmount').textContent = formatCurrency(revenue.terahertz.amount);
-    
+
     document.getElementById('totalSessionsRevenue').textContent = `${revenue.total.count} sessions`;
     document.getElementById('totalAmountRevenue').textContent = formatCurrency(revenue.total.amount);
-    
+
     // Update breakdown table
     const tbody = document.getElementById('revenueBreakdownBody');
     tbody.innerHTML = '';
-    
+
     if (revenue.breakdown.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="fas fa-chart-line"></i><br>No revenue data for this month</td></tr>';
         return;
     }
-    
+
     revenue.breakdown.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `

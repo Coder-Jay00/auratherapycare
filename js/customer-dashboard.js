@@ -3,17 +3,17 @@
 
 let currentUser = null;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Protect page - only customers can access
     currentUser = protectPage('customer');
     if (!currentUser) return;
-    
+
     // Display customer name
     document.getElementById('customerName').textContent = currentUser.name;
     document.getElementById('customerWelcomeName').textContent = currentUser.name;
-    
+
     // Initialize dashboard
-    initializeDashboard();
+    await initializeDashboard();
 });
 
 function initializeDashboard() {
@@ -31,9 +31,9 @@ function initializeDashboard() {
     setupExportButton();
 }
 
-function updateCustomerStats() {
-    const stats = getCustomerStats(currentUser.id);
-    
+async function updateCustomerStats() {
+    const stats = await getCustomerStats(currentUser.id);
+
     document.getElementById('totalSessionsThisMonth').textContent = stats.totalSessions;
     document.getElementById('totalCostThisMonth').textContent = formatCurrency(stats.totalCost);
     document.getElementById('lastVisitDate').textContent = stats.lastVisit ? formatDate(stats.lastVisit) : 'N/A';
@@ -114,19 +114,19 @@ function loadAttendanceCalendar() {
     }
 }
 
-function loadAttendanceList() {
+async function loadAttendanceList() {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    
-    const records = getAttendanceRecords({
+
+    const records = await getAttendanceRecords({
         customerId: currentUser.id,
         month: currentMonth,
         year: currentYear
     });
-    
+
     const listContent = document.getElementById('attendanceListContent');
-    
+
     if (records.length === 0) {
         listContent.innerHTML = `
             <div class="empty-state">
@@ -136,7 +136,7 @@ function loadAttendanceList() {
         `;
         return;
     }
-    
+
     // Group by date
     const recordsByDate = {};
     records.forEach(record => {
@@ -145,28 +145,28 @@ function loadAttendanceList() {
         }
         recordsByDate[record.date].push(record);
     });
-    
+
     // Sort dates in descending order
     const sortedDates = Object.keys(recordsByDate).sort((a, b) => new Date(b) - new Date(a));
-    
+
     let html = '';
     sortedDates.forEach(date => {
         const dayRecords = recordsByDate[date];
         const dayTotal = dayRecords.reduce((sum, r) => sum + r.price, 0);
-        
+
         html += `
             <div class="attendance-item">
                 <div>
                     <div class="attendance-date">${formatDate(date)}</div>
                     <div class="attendance-therapy">
-                        ${dayRecords.map(r => `${r.therapyType} (${formatCurrency(r.price)})`).join(', ')}
+                        ${dayRecords.map(r => `${r.therapy_type} (${formatCurrency(r.price)})`).join(', ')}
                     </div>
                 </div>
                 <div class="attendance-price">${formatCurrency(dayTotal)}</div>
             </div>
         `;
     });
-    
+
     listContent.innerHTML = html;
 }
 
