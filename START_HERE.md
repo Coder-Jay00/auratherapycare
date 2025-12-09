@@ -16,8 +16,8 @@ Use these credentials to log in:
 
 **🔑 Therapist/Admin Account:**
 ```
-Email: coderjt25@gmail.com
-Password: jayadmin2024
+Email: 
+Password: 
 ```
 
 **🔑 Customer Account (to test customer view):**
@@ -141,8 +141,8 @@ See all sessions at a glance!
 
 ### Can't Login?
 - Make sure you're using the exact credentials (copy-paste them)
-- Email: `coderjt25@gmail.com`
-- Password: `jayadmin2024`
+- Email:
+- Password:
 
 ### Not Seeing Data?
 - The app comes pre-loaded with 5 test customers and sample sessions
@@ -236,8 +236,8 @@ Everything is configured, tested, and ready to go. The application includes:
 ├─────────────────────────────────────────────────────┤
 │                                                     │
 │  🔐 THERAPIST LOGIN:                                │
-│  Email: coderjt25@gmail.com                         │
-│  Password: jayadmin2024                             │
+│  Email:                                             │
+│  Password:                                          │
 │                                                     │
 │  🔐 CUSTOMER LOGIN (TEST):                          │
 │  Email: priya@example.com                           │
