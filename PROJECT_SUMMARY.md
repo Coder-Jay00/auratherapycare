@@ -36,8 +36,8 @@
 ## 🔐 Security & Access
 
 ### Admin Account (Pre-configured)
-- **Email**: `coderjt25@gmail.com`
-- **Password**: `jayadmin2024`
+- **Email**: 
+- **Password**:
 - **Role**: Therapist (Full administrative access)
 
 ### Customer Access
