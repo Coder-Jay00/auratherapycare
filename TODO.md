@@ -11,7 +11,7 @@
 - [x] Update js/therapist-dashboard.js to use API calls
 - [x] Update js/auth.js to use API calls
 - [x] Update js/customer-dashboard.js to use API calls
-- [ ] Test the changes to ensure data syncs across devices
+- [x] Test the changes to ensure data syncs across devices
 
 ## Current Status
 - Server.js updated to use only MongoDB (connection options fixed)
