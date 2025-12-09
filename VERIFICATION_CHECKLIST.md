@@ -56,22 +56,7 @@ Use this checklist to verify all features before deployment or demonstration.
 - [ ] Redirects to login after registration
 - [ ] Can login with new credentials
 
-### Credentials Verification
-```
-Test these exact credentials:
 
-Therapist:
-Email: coderjt25@gmail.com
-Password: jayadmin2024
-
-Customer 1:
-Email: priya@example.com
-Password: password123
-
-Customer 2:
-Email: rahul@example.com
-Password: password123
-```
 
 ---
 
