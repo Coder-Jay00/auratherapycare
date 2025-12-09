@@ -19,5 +19,12 @@
 - js/therapist-dashboard.js updated to use async API calls
 - js/auth.js updated to use async API calls
 - js/customer-dashboard.js updated to use async API calls
-- Issue: MongoDB not installed/running locally
-- Next: Set up MongoDB (Atlas cloud or local) and test data sync across devices
+- MongoDB Atlas connection configured and server running
+- API testing in progress: Registration and login endpoints verified working
+- Checkpoint: Basic API functionality confirmed, ready for full testing
+
+## Next Steps (After Checkpoint)
+- Complete attendance data testing
+- Test data sync across multiple browser tabs/windows
+- Test therapist dashboard features (user management, revenue reports)
+- Verify complete data synchronization across devices
