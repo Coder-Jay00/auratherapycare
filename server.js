@@ -205,6 +205,37 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete user (therapist only)
+app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'therapist') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  const { userId } = req.params;
+
+  // Prevent deleting the therapist themselves
+  if (userId === req.user.id) {
+    return res.status(400).json({ error: 'Cannot delete your own account' });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete all attendance records for this user
+    await Attendance.deleteMany({ customer_id: userId });
+
+    // Delete the user
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: 'User and associated data deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // Add attendance (therapist only)
 app.post('/api/attendance', authenticateToken, async (req, res) => {
   if (req.user.role !== 'therapist') {

@@ -108,6 +108,17 @@ async function getAllCustomers() {
     }
 }
 
+async function deleteUser(userId) {
+    try {
+        await apiCall(`/api/users/${userId}`, {
+            method: 'DELETE'
+        });
+        return { success: true, message: 'User deleted successfully' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
 function getUserById(userId) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     return users.find(user => user.id === userId);
