@@ -32,9 +32,7 @@ async function connectToDatabase() {
   try {
     if (!cachedDb) {
       cachedDb = await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://coderjt25_db_user:FEFg67BbbS0Y9kZ5@auratherapycare.yynkfxs.mongodb.net/', {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        maxPoolSize: 10,
+        maxPoolSize: 5,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
       });
@@ -342,6 +340,7 @@ app.get('/api/attendance/month/:customerId/:month/:year', authenticateToken, asy
   const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
   try {
+    await connectToDatabase();
     const records = await Attendance.find({
       customer_id: customerId,
       date: { $gte: startDate, $lte: endDate }
@@ -349,6 +348,7 @@ app.get('/api/attendance/month/:customerId/:month/:year', authenticateToken, asy
 
     res.json(records);
   } catch (err) {
+    console.error('Get attendance month error:', err);
     res.status(500).json({ error: 'Database error' });
   }
 });
