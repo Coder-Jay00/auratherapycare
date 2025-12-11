@@ -141,6 +141,8 @@ async function loadClientsView() {
         const stats = await getCustomerStats(customer._id || customer.id);
 
         const row = document.createElement('tr');
+        const cid = customer._id || customer.id;
+        const todayStr = new Date().toISOString().split('T')[0];
         row.innerHTML = `
             <td><strong>${customer.name}</strong></td>
             <td>${customer.email}</td>
@@ -149,18 +151,17 @@ async function loadClientsView() {
             <td>${stats.totalSessions}</td>
             <td><strong>${formatCurrency(stats.totalCost)}</strong></td>
             <td>
-                <button class="action-btn view" onclick="viewClientAttendance('${customer._id || customer.id}')">
-                    <i class="fas fa-eye"></i> View
-                </button>
-                <button class="action-btn add" onclick="openAttendanceModal('${customer._id || customer.id}', '${new Date().toISOString().split('T')[0]}')">
-                    <i class="fas fa-plus"></i> Add Attendance
-                </button>
-                <button class="action-btn export" onclick="downloadCustomerPdf('${customer._id || customer.id}')">
-                    <i class="fas fa-file-pdf"></i> Download PDF
-                </button>
-                <button class="action-btn delete" onclick="deleteCustomer('${customer._id || customer.id}')">
-                    <i class="fas fa-user-slash"></i> Delete
-                </button>
+                <div class="actions-menu" onmouseenter="showActionsMenu('actions-${cid}')" onmouseleave="hideActionsMenu('actions-${cid}')">
+                    <button class="action-btn actions-trigger" aria-label="Actions" onclick="toggleActionsMenu('actions-${cid}')">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <div class="actions-dropdown" id="actions-${cid}">
+                        <button class="menu-item" onclick="viewClientAttendance('${cid}')"><i class="fas fa-eye"></i> View Attendance</button>
+                        <button class="menu-item" onclick="openAttendanceModal('${cid}', '${todayStr}')"><i class="fas fa-plus"></i> Add Attendance</button>
+                        <button class="menu-item" onclick="downloadCustomerPdf('${cid}')"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button class="menu-item danger" onclick="deleteCustomer('${cid}')"><i class="fas fa-user-slash"></i> Delete Customer</button>
+                    </div>
+                </div>
             </td>
         `;
 
@@ -233,6 +234,32 @@ async function deleteCustomer(userId) {
         alert(result.message);
     }
 }
+
+function toggleActionsMenu(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const isOpen = el.classList.contains('show');
+    document.querySelectorAll('.actions-dropdown.show').forEach(d => d.classList.remove('show'));
+    if (!isOpen) el.classList.add('show');
+}
+
+function showActionsMenu(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('show');
+}
+
+function hideActionsMenu(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('show');
+}
+
+document.addEventListener('click', function(e) {
+    const isTrigger = e.target.closest('.actions-trigger');
+    const isMenu = e.target.closest('.actions-menu');
+    if (!isTrigger && !isMenu) {
+        document.querySelectorAll('.actions-dropdown.show').forEach(d => d.classList.remove('show'));
+    }
+});
 
 function filterClients() {
     const searchTerm = document.getElementById('clientSearch').value.toLowerCase();

@@ -520,6 +520,57 @@ tr:hover td {
     background-color: #FFCDD2;
 }
 
+/* Actions Menu */
+.actions-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.actions-trigger {
+    background-color: var(--bg-gray);
+    color: var(--text-dark);
+}
+
+.actions-dropdown {
+    position: absolute;
+    right: 0;
+    top: 36px;
+    min-width: 220px;
+    background: var(--bg-white);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    display: none;
+    z-index: 10;
+    padding: 8px;
+}
+
+.actions-dropdown.show, .actions-menu:hover .actions-dropdown {
+    display: block;
+}
+
+.actions-dropdown .menu-item {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 6px;
+    color: var(--text-dark);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.actions-dropdown .menu-item:hover {
+    background-color: var(--bg-light);
+}
+
+.actions-dropdown .menu-item.danger {
+    color: var(--error-red);
+}
+
 /* View Sections */
 .view-section {
     display: none;
