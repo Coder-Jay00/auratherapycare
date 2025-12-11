@@ -240,12 +240,18 @@ function toggleActionsMenu(id) {
     if (!el) return;
     const isOpen = el.classList.contains('show');
     document.querySelectorAll('.actions-dropdown.show').forEach(d => d.classList.remove('show'));
-    if (!isOpen) el.classList.add('show');
+    if (!isOpen) {
+        el.classList.add('show');
+        requestAnimationFrame(() => adjustActionsDropdown(id));
+    }
 }
 
 function showActionsMenu(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.add('show');
+    if (el) {
+        el.classList.add('show');
+        requestAnimationFrame(() => adjustActionsDropdown(id));
+    }
 }
 
 function hideActionsMenu(id) {
@@ -260,6 +266,19 @@ document.addEventListener('click', function(e) {
         document.querySelectorAll('.actions-dropdown.show').forEach(d => d.classList.remove('show'));
     }
 });
+
+function adjustActionsDropdown(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.top;
+    const estimated = Math.max(180, Math.min(el.scrollHeight || 220, 300));
+    if (spaceBelow < estimated) {
+        el.classList.add('up');
+    } else {
+        el.classList.remove('up');
+    }
+}
 
 function filterClients() {
     const searchTerm = document.getElementById('clientSearch').value.toLowerCase();

@@ -549,6 +549,11 @@ tr:hover td {
     display: block;
 }
 
+.actions-dropdown.up {
+    top: auto;
+    bottom: 36px;
+}
+
 .actions-dropdown .menu-item {
     width: 100%;
     text-align: left;
