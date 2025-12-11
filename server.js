@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Change in production
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 // Middleware
 app.use(cors({
@@ -53,7 +53,10 @@ async function connectToDatabase() {
 
   try {
     if (!cachedDb) {
-      const uri = process.env.MONGODB_URI || 'mongodb+srv://coderjt25_db_user:FEFg67BbbS0Y9kZ5@auratherapycare.yynkfxs.mongodb.net/auracare?retryWrites=true&w=majority';
+      if (process.env.NODE_ENV === 'production' && !process.env.MONGODB_URI) {
+        throw new Error('MONGODB_URI missing in production environment');
+      }
+      const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/auracare';
       cachedDb = await mongoose.connect(uri, {
         maxPoolSize: 5,
         serverSelectionTimeoutMS: 5000,
@@ -101,22 +104,22 @@ async function connectToDatabase() {
 // Initialize database
 async function initializeDatabase() {
   try {
-    // Check if admin user exists
-    const adminEmail = 'coderjt25@gmail.com';
-    const adminPassword = 'jayadmin2024';
-    const adminName = 'Jay Thakkar';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminName = process.env.ADMIN_NAME || 'Administrator';
 
-    const existingAdmin = await User.findOne({ email: adminEmail });
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash(adminPassword, 10);
-      const adminUser = new User({
-        name: adminName,
-        email: adminEmail,
-        password: hashedPassword,
-        role: 'therapist'
-      });
-      await adminUser.save();
-      console.log('Admin user created successfully.');
+    if (adminEmail && adminPassword) {
+      const existingAdmin = await User.findOne({ email: adminEmail });
+      if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        const adminUser = new User({
+          name: adminName,
+          email: adminEmail,
+          password: hashedPassword,
+          role: 'therapist'
+        });
+        await adminUser.save();
+      }
     }
   } catch (err) {
     console.error('Error initializing database:', err.message);
