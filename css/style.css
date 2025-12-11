@@ -545,7 +545,7 @@ tr:hover td {
     padding: 8px;
 }
 
-.actions-dropdown.show, .actions-menu:hover .actions-dropdown {
+.actions-dropdown.show {
     display: block;
 }
 

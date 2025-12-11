@@ -151,7 +151,7 @@ async function loadClientsView() {
             <td>${stats.totalSessions}</td>
             <td><strong>${formatCurrency(stats.totalCost)}</strong></td>
             <td>
-                <div class="actions-menu" onmouseenter="showActionsMenu('actions-${cid}')" onmouseleave="hideActionsMenu('actions-${cid}')">
+                <div class="actions-menu">
                     <button class="action-btn actions-trigger" aria-label="Actions" onclick="toggleActionsMenu('actions-${cid}')">
                         <i class="fas fa-ellipsis-h"></i>
                     </button>
