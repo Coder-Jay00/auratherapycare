@@ -1,5 +1,17 @@
 # 🚀 START HERE - AuraTheracare
 
+> Checkpoint: Action required next time you open
+
+- Add your Atlas database user and verify password in Atlas Database Access
+- Use URI with database path: `mongodb+srv://<user>:<pass>@<host>/auratherapycare?retryWrites=true&w=majority`
+- Ensure Atlas Network Access includes your public IP or `0.0.0.0/0`
+- Set environment variables before starting server:
+  - `MONGODB_URI` → Atlas URI to `auratherapycare`
+  - `JWT_SECRET` → strong random string
+  - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` → admin seeding
+- Restart server and test admin login
+- If auth fails: reset Atlas user password and retry
+
 ## 👋 Welcome to AuraTheracare!
 
 This is a **complete, ready-to-use** therapy attendance and billing tracking web application. Everything is set up and working - just follow the simple steps below!
