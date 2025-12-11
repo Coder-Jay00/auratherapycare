@@ -155,10 +155,82 @@ async function loadClientsView() {
                 <button class="action-btn add" onclick="openAttendanceModal('${customer._id || customer.id}', '${new Date().toISOString().split('T')[0]}')">
                     <i class="fas fa-plus"></i> Add Attendance
                 </button>
+                <button class="action-btn export" onclick="downloadCustomerPdf('${customer._id || customer.id}')">
+                    <i class="fas fa-file-pdf"></i> Download PDF
+                </button>
+                <button class="action-btn delete" onclick="deleteCustomer('${customer._id || customer.id}')">
+                    <i class="fas fa-user-slash"></i> Delete
+                </button>
             </td>
         `;
 
         tbody.appendChild(row);
+    }
+}
+
+async function downloadCustomerPdf(customerId) {
+    const monthInputEl = document.getElementById('revenueMonth');
+    const today = new Date();
+    const fallback = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const monthInput = monthInputEl ? monthInputEl.value || fallback : fallback;
+    const [yearStr, monthStr] = monthInput.split('-');
+    const year = parseInt(yearStr);
+    const monthIdx = parseInt(monthStr) - 1;
+
+    const invoice = await getMonthlyInvoiceData(customerId, monthIdx, year);
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+        alert('PDF library not loaded. Please check your network connection.');
+        return;
+    }
+
+    const doc = new jsPDF();
+    const title = `AuraTherapyCare Monthly Invoice`;
+    const sub = `${getMonthName(monthIdx)} ${year}`;
+    doc.setFontSize(16);
+    doc.text(title, 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Client: ${invoice.customer.name}`, 14, 28);
+    doc.text(`Email: ${invoice.customer.email || ''}`, 14, 34);
+    doc.text(`Period: ${sub}`, 14, 40);
+
+    let y = 50;
+    doc.setFontSize(12);
+    doc.text('Date', 14, y);
+    doc.text('Therapy', 60, y);
+    doc.text('Price (₹)', 140, y);
+    y += 6;
+
+    invoice.records.forEach(r => {
+        const therapy = r.therapyType || r.therapy_type;
+        doc.text(formatDate(r.date), 14, y);
+        doc.text(String(therapy), 60, y);
+        doc.text(String(r.price), 140, y);
+        y += 6;
+        if (y > 270) {
+            doc.addPage();
+            y = 20;
+        }
+    });
+
+    y += 6;
+    doc.setFontSize(13);
+    doc.text(`Total Sessions: ${invoice.totalSessions}`, 14, y);
+    doc.text(`Total Amount: ${formatCurrency(invoice.totalAmount)}`, 110, y);
+
+    const fileName = `Invoice_${invoice.customer.name.replace(/\s+/g,'_')}_${year}-${String(monthIdx+1).padStart(2,'0')}.pdf`;
+    doc.save(fileName);
+}
+
+async function deleteCustomer(userId) {
+    if (!confirm('Delete this customer and all their attendance records?')) return;
+    const result = await deleteUser(userId);
+    if (result.success) {
+        await updateStats();
+        await loadClientsView();
+        alert('Customer deleted successfully');
+    } else {
+        alert(result.message);
     }
 }
 
