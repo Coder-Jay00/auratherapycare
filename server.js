@@ -19,6 +19,28 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
 
+const sseClients = new Set();
+function broadcast(event, data) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of sseClients) {
+    try { res.write(msg); } catch (e) {}
+  }
+}
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+  res.write(`event: connected\ndata: {}\n\n`);
+  sseClients.add(res);
+  req.on('close', () => { sseClients.delete(res); });
+});
+setInterval(() => {
+  for (const res of sseClients) {
+    try { res.write(`:\n\n`); } catch (e) {}
+  }
+}, 30000);
+
 // Database connection cache for serverless
 let cachedDb = null;
 let User = null;
@@ -204,6 +226,7 @@ app.post('/api/register', async (req, res) => {
         role: 'customer'
       }
     });
+    broadcast('user_registered', { id: savedUser._id, name, email });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'User registration failed' });
@@ -268,6 +291,7 @@ app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
     await User.findByIdAndDelete(userId);
 
     res.json({ message: 'User and associated data deleted successfully' });
+    broadcast('user_deleted', { id: userId });
   } catch (err) {
     console.error('Delete user error:', err);
     res.status(500).json({ error: 'Failed to delete user' });
@@ -297,6 +321,7 @@ app.post('/api/attendance', authenticateToken, async (req, res) => {
     });
 
     const savedAttendance = await attendance.save();
+    broadcast('attendance_added', { customerId, date, therapyType, price });
     res.status(201).json({
       id: savedAttendance._id,
       message: 'Attendance added successfully'

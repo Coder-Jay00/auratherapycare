@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load initial view
     loadClientsView();
+
+    setupLiveUpdates();
 });
 
 function initializeDashboard() {
@@ -61,6 +63,30 @@ function setupEventListeners() {
     
     // Attendance form
     document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSave);
+}
+
+function setupLiveUpdates() {
+    const es = new EventSource('/api/events');
+    es.addEventListener('attendance_added', function(e) {
+        try {
+            JSON.parse(e.data);
+        } catch (err) {}
+        updateStats();
+        loadClientsView();
+        if (selectedCustomer) {
+            loadCalendarEvents();
+        }
+        loadRevenueData();
+    });
+    es.addEventListener('user_registered', function(e) {
+        updateStats();
+        loadClientsView();
+    });
+    es.addEventListener('user_deleted', function(e) {
+        updateStats();
+        loadClientsView();
+        loadRevenueData();
+    });
 }
 
 function switchView(view) {
