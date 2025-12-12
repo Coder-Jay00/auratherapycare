@@ -220,7 +220,11 @@ async function exportMonthlyInvoice() {
 }
 
 function generateInvoicePDF(invoiceData) {
-    const { jsPDF } = window.jspdf;
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+        alert('PDF library not loaded. Please check your network connection.');
+        return;
+    }
     const doc = new jsPDF();
     
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -303,28 +307,50 @@ function generateInvoicePDF(invoiceData) {
         });
     });
     
-    // Add table using autoTable plugin
-    doc.autoTable({
-        startY: yPosition,
-        head: [['Date', 'Therapy Type', 'Amount']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: {
-            fillColor: [74, 144, 226],
-            textColor: 255,
-            fontStyle: 'bold'
-        },
-        styles: {
-            fontSize: 10,
-            cellPadding: 5
-        },
-        alternateRowStyles: {
-            fillColor: [248, 250, 251]
-        }
-    });
-    
-    // Get final Y position after table
-    yPosition = doc.lastAutoTable.finalY + 15;
+    // Add table using autoTable plugin if available, else fallback
+    if (typeof doc.autoTable === 'function') {
+        doc.autoTable({
+            startY: yPosition,
+            head: [['Date', 'Therapy Type', 'Amount']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [74, 144, 226],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            styles: {
+                fontSize: 10,
+                cellPadding: 5
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 251]
+            }
+        });
+        yPosition = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : yPosition) + 15;
+    } else {
+        const xDate = margin;
+        const xTherapy = margin + 70;
+        const xAmount = pageWidth - margin - 20;
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(10);
+        doc.text('Date', xDate, yPosition);
+        doc.text('Therapy Type', xTherapy, yPosition);
+        doc.text('Amount', xAmount, yPosition);
+        yPosition += 8;
+        doc.setFont(undefined, 'normal');
+        tableData.forEach(row => {
+            if (yPosition > pageHeight - margin - 20) {
+                doc.addPage();
+                yPosition = margin;
+            }
+            doc.text(row[0], xDate, yPosition);
+            doc.text(row[1], xTherapy, yPosition);
+            doc.text(row[2], xAmount, yPosition, { align: 'right' });
+            yPosition += 6;
+        });
+        yPosition += 12;
+    }
     
     // Summary Box
     const summaryBoxX = pageWidth - margin - 80;
