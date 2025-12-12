@@ -63,6 +63,16 @@ function setupEventListeners() {
     
     // Attendance form
     document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSave);
+    
+    window.addEventListener('resize', () => {
+        document.querySelectorAll('.actions-dropdown.show').forEach(d => adjustActionsDropdown(d.id));
+    });
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        mainContent.addEventListener('scroll', () => {
+            document.querySelectorAll('.actions-dropdown.show').forEach(d => adjustActionsDropdown(d.id));
+        });
+    }
 }
 
 function setupLiveUpdates() {
@@ -271,9 +281,9 @@ function adjustActionsDropdown(id) {
     const el = document.getElementById(id);
     if (!el) return;
     const rect = el.getBoundingClientRect();
+    const menuHeight = el.offsetHeight || (el.scrollHeight || 0);
     const spaceBelow = window.innerHeight - rect.top;
-    const estimated = Math.max(180, Math.min(el.scrollHeight || 220, 300));
-    if (spaceBelow < estimated) {
+    if (spaceBelow < menuHeight + 8) {
         el.classList.add('up');
     } else {
         el.classList.remove('up');
