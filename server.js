@@ -27,20 +27,27 @@ function broadcast(event, data) {
     try { res.write(msg); } catch (e) {}
   }
 }
-app.get('/api/events', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  if (typeof res.flushHeaders === 'function') res.flushHeaders();
-  res.write(`event: connected\ndata: {}\n\n`);
-  sseClients.add(res);
-  req.on('close', () => { sseClients.delete(res); });
-});
-setInterval(() => {
-  for (const res of sseClients) {
-    try { res.write(`:\n\n`); } catch (e) {}
-  }
-}, 30000);
+const isServerless = !!process.env.VERCEL || !!process.env.NOW_REGION;
+if (!isServerless) {
+  app.get('/api/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    res.write(`event: connected\ndata: {}\n\n`);
+    sseClients.add(res);
+    req.on('close', () => { sseClients.delete(res); });
+  });
+  setInterval(() => {
+    for (const res of sseClients) {
+      try { res.write(`:\n\n`); } catch (e) {}
+    }
+  }, 30000);
+} else {
+  app.get('/api/events', (req, res) => {
+    res.status(503).json({ error: 'SSE not supported in serverless environment' });
+  });
+}
 
 // Database connection cache for serverless
 let cachedDb = null;
@@ -452,3 +459,4 @@ if (require.main === module) {
     process.exit(0);
   });
 }
+module.exports = app;

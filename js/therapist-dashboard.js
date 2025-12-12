@@ -76,27 +76,40 @@ function setupEventListeners() {
 }
 
 function setupLiveUpdates() {
-    const es = new EventSource('/api/events');
-    es.addEventListener('attendance_added', function(e) {
-        try {
-            JSON.parse(e.data);
-        } catch (err) {}
+    function triggerRefresh() {
         updateStats();
         loadClientsView();
         if (selectedCustomer) {
             loadCalendarEvents();
         }
         loadRevenueData();
-    });
-    es.addEventListener('user_registered', function(e) {
-        updateStats();
-        loadClientsView();
-    });
-    es.addEventListener('user_deleted', function(e) {
-        updateStats();
-        loadClientsView();
-        loadRevenueData();
-    });
+    }
+    function startPolling(intervalMs = 30000) {
+        triggerRefresh();
+        const timer = setInterval(triggerRefresh, intervalMs);
+        return () => clearInterval(timer);
+    }
+    try {
+        const es = new EventSource('/api/events');
+        es.addEventListener('attendance_added', function(e) {
+            triggerRefresh();
+        });
+        es.addEventListener('user_registered', function(e) {
+            updateStats();
+            loadClientsView();
+        });
+        es.addEventListener('user_deleted', function(e) {
+            updateStats();
+            loadClientsView();
+            loadRevenueData();
+        });
+        es.onerror = function() {
+            try { es.close(); } catch (_) {}
+            startPolling(30000);
+        };
+    } catch (_) {
+        startPolling(30000);
+    }
 }
 
 function switchView(view) {
