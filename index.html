@@ -39,6 +39,7 @@
                 </div>
 
                 <div id="loginError" class="error-message"></div>
+                <div id="runtimeStatus" class="error-message"></div>
 
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-sign-in-alt"></i>
@@ -56,7 +57,16 @@
         </div>
     </div>
 
-    <script src="js/data.js"></script>
-    <script src="js/auth.js"></script>
+    <script>
+        (function(){
+            var el=document.getElementById('runtimeStatus');
+            if(!el) return;
+            fetch('/api/health').then(function(r){return r.json()}).then(function(d){
+                if(!d.ok){el.textContent='Backend unavailable: '+(d.error||'');}
+            }).catch(function(){el.textContent='Backend unreachable';});
+        })();
+    </script>
+    <script src="js/data.js" onerror="document.getElementById('runtimeStatus').textContent='Failed to load js/data.js'"></script>
+    <script src="js/auth.js" onerror="document.getElementById('runtimeStatus').textContent='Failed to load js/auth.js'"></script>
 </body>
 </html>
