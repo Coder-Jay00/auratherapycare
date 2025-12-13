@@ -3,10 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-base" content="https://auratherapycare.vercel.app">
     <title>AuraTheracare - Register</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script>
+        (function(){
+            try {
+                var isLocal = /^localhost$|^127\\.0\\.0\\.1$/.test(window.location.hostname);
+                if (isLocal) return;
+                if (window.__API_BASE) return;
+                var params = new URLSearchParams(window.location.search);
+                if (params.get('api_base')) return;
+                var fromStorage = null;
+                try { fromStorage = localStorage.getItem('API_BASE'); } catch(e) {}
+                if (fromStorage) return;
+                var meta = document.querySelector('meta[name="api-base"]');
+                var fromMeta = meta && meta.getAttribute('content');
+                if (fromMeta) window.__API_BASE = fromMeta;
+            } catch (_) {}
+        })();
+    </script>
 </head>
 <body class="auth-page">
     <div class="auth-container">
