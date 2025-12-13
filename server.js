@@ -24,12 +24,24 @@ if (!isServerless) {
   app.use(express.static(path.join(__dirname)));
 }
 
+// Root route - simple health check
 app.get('/', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    message: 'AuraTherapyCare API is running',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    res.status(200).json({ 
+      status: 'ok', 
+      message: 'AuraTherapyCare API is running',
+      timestamp: new Date().toISOString(),
+      environment: process.env.VERCEL ? 'production' : 'development'
+    });
+  } catch (err) {
+    console.error('Root route error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Favicon route - return 204 No Content
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
 });
 
 const sseClients = new Set();
@@ -489,6 +501,11 @@ process.on('unhandledRejection', (reason, promise) => {
 // Vercel's @vercel/node runtime expects the Express app to be exported directly
 // The app will be automatically wrapped by Vercel's runtime
 module.exports = app;
+
+// Ensure the app handles errors gracefully
+app.on('error', (err) => {
+  console.error('Express app error:', err);
+});
 
 // For local development
 if (require.main === module) {
