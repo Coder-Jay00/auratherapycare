@@ -24,8 +24,15 @@ if (!isServerless) {
   app.use(express.static(path.join(__dirname)));
 }
 
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+app.get('/', async (req, res) => {
+  try {
+    res.status(200).json({ status: 'ok', message: 'AuraTherapyCare API is running' });
+  } catch (err) {
+    console.error('Root route error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 });
 
 const sseClients = new Set();

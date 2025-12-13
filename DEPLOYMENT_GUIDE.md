@@ -100,46 +100,7 @@ This guide will help you deploy the AuraTheracare application to various hosting
 5. **Access Your Site**
    - URL: `https://your-project-name.vercel.app`
 
-### Option 4: Firebase Hosting (Free Google Service)
-
-**Best for:** Google ecosystem, reliable hosting
-
-#### Prerequisites:
-- Node.js installed
-- Firebase CLI: `npm install -g firebase-tools`
-
-#### Steps:
-
-1. **Install Firebase CLI**
-   ```bash
-   npm install -g firebase-tools
-   ```
-
-2. **Login to Firebase**
-   ```bash
-   firebase login
-   ```
-
-3. **Initialize Project**
-   ```bash
-   firebase init hosting
-   # Select "Hosting" with spacebar, press Enter
-   # Choose "Create a new project" or select existing
-   # Project name: auracare (or your choice)
-   # Public directory: . (current directory)
-   # Configure as single-page app: No
-   # File overwrites: No
-   ```
-
-4. **Deploy**
-   ```bash
-   firebase deploy
-   ```
-
-5. **Access Your Site**
-   - URL provided in terminal output
-
-### Option 5: Traditional Web Hosting
+### Option 4: Traditional Web Hosting
 
 **Best for:** Custom domains, full control
 
