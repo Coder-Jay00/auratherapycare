@@ -8,10 +8,24 @@ const THERAPY_PRICES = {
 };
 
 function resolveApiBase() {
-    const override = window.__API_BASE__ || localStorage.getItem('API_BASE');
-    if (override) return override;
-    const origin = window.location.origin;
-    return origin;
+    var fromWindow = window.__API_BASE__;
+    if (fromWindow) return fromWindow;
+    var params = new URLSearchParams(window.location.search);
+    var fromQuery = params.get('api_base');
+    if (fromQuery) {
+        try { localStorage.setItem('API_BASE', fromQuery); } catch(e) {}
+        return fromQuery;
+    }
+    var fromStorage = null;
+    try { fromStorage = localStorage.getItem('API_BASE'); } catch(e) {}
+    if (fromStorage) return fromStorage;
+    var meta = document.querySelector('meta[name=\"api-base\"]');
+    var fromMeta = meta && meta.getAttribute('content');
+    if (fromMeta) {
+        try { localStorage.setItem('API_BASE', fromMeta); } catch(e) {}
+        return fromMeta;
+    }
+    return window.location.origin;
 }
 const API_BASE = resolveApiBase();
 

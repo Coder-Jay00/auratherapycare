@@ -66,10 +66,30 @@
                 el.classList.add(type==='ok'?'success-message':'error-message','show');
                 el.textContent = el.textContent ? (el.textContent + ' • ' + msg) : msg;
             }
+            function resolveApiBase(){
+                var fromWindow = window.__API_BASE__;
+                if (fromWindow) return fromWindow;
+                var params = new URLSearchParams(window.location.search);
+                var fromQuery = params.get('api_base');
+                if (fromQuery) {
+                    try { localStorage.setItem('API_BASE', fromQuery); } catch(e) {}
+                    return fromQuery;
+                }
+                var fromStorage = null;
+                try { fromStorage = localStorage.getItem('API_BASE'); } catch(e) {}
+                if (fromStorage) return fromStorage;
+                var meta = document.querySelector('meta[name="api-base"]');
+                var fromMeta = meta && meta.getAttribute('content');
+                if (fromMeta) {
+                    try { localStorage.setItem('API_BASE', fromMeta); } catch(e) {}
+                    return fromMeta;
+                }
+                return window.location.origin;
+            }
             function healthCheck(){
                 var controller = new AbortController();
                 var t = setTimeout(function(){controller.abort()}, 7000);
-                var base = (window.__API_BASE__ || localStorage.getItem('API_BASE') || window.location.origin);
+                var base = resolveApiBase();
                 fetch(base + '/api/health',{signal:controller.signal}).then(function(r){return r.json()}).then(function(d){
                     clearTimeout(t);
                     if(d && d.ok){ setStatus('Backend online', 'ok'); }
