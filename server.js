@@ -64,7 +64,8 @@ app.get(/\.(css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/, (req, res, ne
   try {
     const fs = require('fs');
     // Remove leading slash and get the file path
-    const filePath = path.join(__dirname, req.path);
+    const relativePath = req.path.replace(/^\//, '');
+    const filePath = path.join(__dirname, relativePath);
     
     if (fs.existsSync(filePath)) {
       let contentType = 'text/plain';
@@ -576,7 +577,7 @@ app.on('error', (err) => {
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running at http://localhost:${PORT}/`);
   });
 
   // Graceful shutdown
