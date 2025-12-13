@@ -24,8 +24,59 @@ if (!isServerless) {
   app.use(express.static(path.join(__dirname)));
 }
 
-// Note: Root route removed - Vercel serves static files (index.html) automatically
-// Only /api/* routes are handled by this server
+// Root route - serve index.html
+app.get('/', (req, res) => {
+  try {
+    const fs = require('fs');
+    const indexPath = path.join(__dirname, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      const html = fs.readFileSync(indexPath, 'utf8');
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(html);
+    }
+    res.status(404).send('index.html not found');
+  } catch (err) {
+    console.error('Error serving index.html:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
+// Serve other HTML pages
+app.get(/\.html$/, (req, res) => {
+  try {
+    const fs = require('fs');
+    const fileName = req.path.replace(/^\//, '');
+    const filePath = path.join(__dirname, fileName);
+    if (fs.existsSync(filePath)) {
+      const html = fs.readFileSync(filePath, 'utf8');
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(html);
+    }
+    res.status(404).send('File not found');
+  } catch (err) {
+    console.error('Error serving HTML file:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
+// Serve static files (CSS, JS) in serverless
+app.get(/\.(css|js)$/, (req, res, next) => {
+  try {
+    const fs = require('fs');
+    const fileName = req.path.replace(/^\//, '');
+    const filePath = path.join(__dirname, fileName);
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const contentType = fileName.endsWith('.css') ? 'text/css' : 'application/javascript';
+      res.setHeader('Content-Type', contentType);
+      return res.send(content);
+    }
+    next();
+  } catch (err) {
+    console.error('Error serving static file:', err);
+    next();
+  }
+});
 
 // Favicon route - return 204 No Content
 app.get('/favicon.ico', (req, res) => {
