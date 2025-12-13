@@ -24,20 +24,8 @@ if (!isServerless) {
   app.use(express.static(path.join(__dirname)));
 }
 
-// Root route - simple health check
-app.get('/', (req, res) => {
-  try {
-    res.status(200).json({ 
-      status: 'ok', 
-      message: 'AuraTherapyCare API is running',
-      timestamp: new Date().toISOString(),
-      environment: process.env.VERCEL ? 'production' : 'development'
-    });
-  } catch (err) {
-    console.error('Root route error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+// Note: Root route removed - Vercel serves static files (index.html) automatically
+// Only /api/* routes are handled by this server
 
 // Favicon route - return 204 No Content
 app.get('/favicon.ico', (req, res) => {
