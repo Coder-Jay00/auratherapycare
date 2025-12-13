@@ -76,14 +76,19 @@ async function connectToDatabase() {
 
   try {
     if (!cachedDb) {
-      if (process.env.NODE_ENV === 'production' && !process.env.MONGODB_URI) {
-        throw new Error('MONGODB_URI missing in production environment');
-      }
+      // Check for MONGODB_URI in serverless/production environments
+      const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
       const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/auratherapycare';
+      
+      if (isProduction && !process.env.MONGODB_URI) {
+        throw new Error('MONGODB_URI environment variable is required in production. Please set it in Vercel project settings → Environment Variables.');
+      }
+      
       cachedDb = await mongoose.connect(uri, {
         maxPoolSize: 5,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 10000, // Increased timeout for serverless
         socketTimeoutMS: 45000,
+        connectTimeoutMS: 10000,
       });
       const dbName = mongoose.connection.name;
       const target = uri.startsWith('mongodb+srv://') ? 'Atlas SRV' : 'Direct host';
@@ -120,6 +125,8 @@ async function connectToDatabase() {
     return cachedDb;
   } catch (err) {
     console.error('Error connecting to MongoDB:', err.message);
+    // Don't throw - let routes handle the error
+    cachedDb = null;
     throw err;
   }
 }
@@ -206,7 +213,9 @@ app.post('/api/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Database error' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || 'Database error' });
+    }
   }
 });
 
@@ -258,7 +267,9 @@ app.post('/api/register', async (req, res) => {
     broadcast('user_registered', { id: savedUser._id, name, email });
   } catch (err) {
     console.error('Register error:', err);
-    res.status(500).json({ error: 'User registration failed' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || 'User registration failed' });
+    }
   }
 });
 
