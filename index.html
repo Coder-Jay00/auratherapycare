@@ -69,7 +69,8 @@
             function healthCheck(){
                 var controller = new AbortController();
                 var t = setTimeout(function(){controller.abort()}, 7000);
-                fetch('/api/health',{signal:controller.signal}).then(function(r){return r.json()}).then(function(d){
+                var base = (window.__API_BASE__ || localStorage.getItem('API_BASE') || window.location.origin);
+                fetch(base + '/api/health',{signal:controller.signal}).then(function(r){return r.json()}).then(function(d){
                     clearTimeout(t);
                     if(d && d.ok){ setStatus('Backend online', 'ok'); }
                     else { setStatus('Backend unavailable: ' + (d && d.error ? d.error : 'unknown'), 'error'); }
