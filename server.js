@@ -59,16 +59,42 @@ app.get(/\.html$/, (req, res) => {
   }
 });
 
-// Serve static files (CSS, JS) in serverless
-app.get(/\.(css|js)$/, (req, res, next) => {
+// Serve static files (CSS, JS, images) in serverless
+app.get(/\.(css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/, (req, res, next) => {
   try {
     const fs = require('fs');
-    const fileName = req.path.replace(/^\//, '');
-    const filePath = path.join(__dirname, fileName);
+    // Remove leading slash and get the file path
+    const filePath = path.join(__dirname, req.path);
+    
     if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const contentType = fileName.endsWith('.css') ? 'text/css' : 'application/javascript';
+      let contentType = 'text/plain';
+      let content;
+      
+      if (req.path.endsWith('.css')) {
+        contentType = 'text/css';
+        content = fs.readFileSync(filePath, 'utf8');
+      } else if (req.path.endsWith('.js')) {
+        contentType = 'application/javascript';
+        content = fs.readFileSync(filePath, 'utf8');
+      } else if (req.path.endsWith('.png')) {
+        contentType = 'image/png';
+        content = fs.readFileSync(filePath);
+      } else if (req.path.endsWith('.jpg') || req.path.endsWith('.jpeg')) {
+        contentType = 'image/jpeg';
+        content = fs.readFileSync(filePath);
+      } else if (req.path.endsWith('.svg')) {
+        contentType = 'image/svg+xml';
+        content = fs.readFileSync(filePath, 'utf8');
+      } else if (req.path.endsWith('.ico')) {
+        contentType = 'image/x-icon';
+        content = fs.readFileSync(filePath);
+      } else {
+        // Default to text for other file types
+        content = fs.readFileSync(filePath, 'utf8');
+      }
+      
       res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
       return res.send(content);
     }
     next();
